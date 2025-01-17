@@ -1,0 +1,417 @@
+:root {
+    --background-color: #1a1a1a;
+    --card-background: #2d2d2d;
+    --text-color: #ecf0f1;
+    --secondary-color: #3498db;
+    --hover-color: #2980b9;
+    --border-color: #444;
+    --error-color: #e74c3c;
+    --card-bg: #2d2d2d;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 95%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Login styles */
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 2rem;
+    background-color: var(--card-background);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+#login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+#login-form h2 {
+    color: var(--text-color);
+    margin: 0;
+    text-align: center;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+#login-form button {
+    padding: 0.75rem;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#login-form button:hover {
+    background-color: var(--hover-color);
+}
+
+.error {
+    color: var(--error-color);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+input {
+    font-family: inherit;
+}
+
+button {
+    padding: 0.8rem;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: var(--hover-color);
+}
+
+/* Header styles */
+header {
+    background: var(--card-background);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+header h1 {
+    margin: 0;
+    color: var(--secondary-color);
+}
+
+/* Logout button specific style */
+button#logout-btn {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    padding: 0.5rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: auto;
+}
+
+button#logout-btn:hover {
+    background-color: var(--hover-color);
+}
+
+/* Profile Grid */
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    margin: 2rem auto;
+    width: 95%;
+    max-width: 1400px;
+}
+
+.card {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+    font-size: 1.5rem;
+}
+
+.content {
+    color: var(--text-color);
+}
+
+#graph-container {
+    grid-column: span 2;
+    min-height: 500px;
+}
+
+#projects-list,
+#audits-list {
+    grid-column: span 1;
+}
+
+.projects-table,
+.audits-table {
+    width: 100%;
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+
+.projects-table table,
+.audits-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.projects-table th,
+.projects-table td,
+.audits-table th,
+.audits-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.projects-table th,
+.audits-table th {
+    background-color: rgba(255, 255, 255, 0.05);
+    font-weight: bold;
+    color: #fff;
+}
+
+.projects-table tr:hover,
+.audits-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.lists-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.card#projects-list,
+.card#audits-list {
+    margin: 0;
+    
+}
+
+#basic-info,
+#xp-info,
+#audit-info {
+    min-height: 150px;
+}
+
+/* Status styles */
+.passed {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.failed {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.in-progress {
+    color: #2196F3;
+    font-weight: bold;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+th {
+    background-color: rgba(255, 255, 255, 0.05);
+    font-weight: bold;
+    color: #fff;
+}
+
+tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 1200px) {
+    .container,
+    .profile-grid {
+        width: 98%;
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    #graph-container,
+    #projects-list,
+    #audits-list {
+        grid-column: span 1;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+}
+
+/* Graph styles */
+.graph-container {
+    background: #2c3e50;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Graph elements */
+.line {
+    fill: none;
+    stroke: #3498db;
+    stroke-width: 3;
+}
+
+.dot {
+    fill: #3498db;
+    transition: r 0.2s ease-in-out;
+}
+
+.dot:hover {
+    r: 6;
+    fill: #2980b9;
+}
+
+/* Pie chart colors */
+.passed-slice {
+    fill: #2ecc71;
+}
+
+.failed-slice {
+    fill: #e74c3c;
+}
+
+/* Axis styling */
+.axis path,
+.axis line {
+    stroke: #95a5a6;
+}
+
+.axis text {
+    fill: #ecf0f1;
+    font-size: 12px;
+}
+
+/* Tooltip */
+.graph-tooltip {
+    background: #34495e !important;
+    color: #ecf0f1 !important;
+    padding: 10px !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Status colors */
+.status-passed, .passed {
+    color: #2ecc71 !important;
+    font-weight: 600;
+}
+
+.status-failed, .failed {
+    color: #e74c3c !important;
+    font-weight: 600;
+}
+
+.status-pending {
+    color: #f1c40f !important;
+    font-weight: 600;
+}
+
+/* Graph select dropdown */
+select {
+    background-color: #34495e;
+    color: #ecf0f1;
+    border: 2px solid #3498db;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+select:hover {
+    background-color: #2c3e50;
+    border-color: #2980b9;
+}
+
+select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+/* Loading and error states */
+.loading, .error {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+    background: var(--card-background);
+    border-radius: 8px;
+    margin: 2rem auto;
+    max-width: 600px;
+}
+
+.error {
+    color: var(--error-color);
+}

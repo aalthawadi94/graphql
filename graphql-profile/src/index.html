@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Profile</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="login-container" class="login-container">
+        <form id="login-form">
+            <h2>Login</h2>
+            <div id="error-message" class="error"></div>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <div id="profile-container" class="container hidden">
+        <header>
+            <h1>School Profile</h1>
+            <button id="logout-btn">Logout</button>
+        </header>
+
+        <div class="profile-grid">
+            <div class="card" id="basic-info">
+                <h2>Basic Information</h2>
+                <div class="content">
+                    <p><strong>Login:</strong> <span id="user-login"></span></p>
+                    <p><strong>ID:</strong> <span id="user-id"></span></p>
+                </div>
+            </div>
+
+            <div class="card" id="xp-info">
+                <h2>XP Progress</h2>
+                <div class="content">
+                    <p><strong>Total XP:</strong> <span id="total-xp"></span></p>
+                    <p><strong>Projects Completed:</strong> <span id="projects-completed"></span></p>
+                </div>
+            </div>
+
+            <div class="card" id="audit-info">
+                <h2>Audit Statistics</h2>
+                <div class="content">
+                    <p><strong>Total Audits:</strong> <span id="total-audits"></span></p>
+                    <p><strong>Passed Audits:</strong> <span id="passed-audits"></span></p>
+                    <p><strong>Failed Audits:</strong> <span id="failed-audits"></span></p>
+                    <p><strong>Success Rate:</strong> <span id="success-rate"></span></p>
+                </div>
+            </div>
+
+            <div class="card" id="graph-container">
+                <h2>Statistics</h2>
+                <div class="graph-controls">
+                    <select id="graph-type">
+                        <option value="xp">XP over Time</option>
+                        <option value="ratio">Project Pass/Fail Ratio</option>
+                    </select>
+                </div>
+                <div id="graph"></div>
+            </div>
+
+            <div class="card" id="projects-list">
+                <h2>Recent Projects</h2>
+                <div class="projects-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projects-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" id="audits-list">
+                <h2>Recent Audits</h2>
+                <div class="audits-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Date</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audits-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "graphql-profile",
+  "version": "1.0.0",
+  "description": "A profile page using GraphQL",
+  "main": "index.js",
+  "scripts": {
+    "start": "parcel src/index.html",
+    "build": "parcel build src/index.html"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.8.8",
+    "d3": "^7.8.5",
+    "graphql": "^16.8.1",
+    "jwt-decode": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "parcel": "^2.10.3",
+    "vite": "^5.0.8"
+  }
+}
