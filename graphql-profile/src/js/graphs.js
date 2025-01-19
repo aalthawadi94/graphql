@@ -1,27 +1,35 @@
 import * as d3 from './lib/d3.js';
 
-export function renderXPOverTime(container, data) {
+export function renderXPOverTime(container, transactions) {
     // Clear any existing content
     container.innerHTML = '';
-    
-    if (!data || data.length === 0) {
-        container.innerHTML = 'No XP data available';
+
+    if (!transactions || transactions.length === 0) {
+        container.innerHTML = '<p>No XP data available</p>';
         return;
     }
 
-    // Sort data by date and calculate cumulative XP
+    // Sort transactions by date
+    const sortedTransactions = [...transactions].sort((a, b) => 
+        new Date(a.createdAt) - new Date(b.createdAt)
+    );
+
+    // Calculate cumulative XP
     let cumulativeXP = 0;
-    const processedData = [...data]
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-        .map(d => ({
-            date: new Date(d.createdAt),
-            xp: (cumulativeXP += Number(d.amount))
-        }));
+    const data = sortedTransactions.map(t => {
+        cumulativeXP += t.amount;
+        return {
+            date: new Date(t.createdAt),
+            xp: cumulativeXP,
+            project: t.object?.name || 'Unknown',
+            amount: t.amount
+        };
+    });
 
     // Set up dimensions
-    const margin = { top: 40, right: 30, bottom: 30, left: 60 };  // Increased top margin for title
+    const margin = { top: 20, right: 80, bottom: 30, left: 60 };
     const width = container.clientWidth - margin.left - margin.right;
-    const height = container.clientHeight - margin.top - margin.bottom;
+    const height = 400 - margin.top - margin.bottom;
 
     // Create SVG
     const svg = d3.select(container)
@@ -31,78 +39,55 @@ export function renderXPOverTime(container, data) {
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // Add title
-    svg.append('text')
-        .attr('x', width / 2)
-        .attr('y', -margin.top / 2)
-        .attr('text-anchor', 'middle')
-        .style('font-size', '16px')
-        .style('fill', '#ecf0f1')
-        .text('XP Progression');
-
-    // Create scales
+    // Set up scales
     const x = d3.scaleTime()
-        .domain(d3.extent(processedData, d => d.date))
+        .domain(d3.extent(data, d => d.date))
         .range([0, width]);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(processedData, d => d.xp)])
+        .domain([0, d3.max(data, d => d.xp)])
         .range([height, 0]);
 
-    // Create line generator
+    // Create line
     const line = d3.line()
         .x(d => x(d.date))
-        .y(d => y(d.xp))
-        .curve(d3.curveMonotoneX);
+        .y(d => y(d.xp));
 
     // Add axes
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
-        .call(d3.axisBottom(x)
-            .tickFormat(d => {
-                const month = d.toLocaleString('en-US', { month: 'short' });
-                const year = d.getFullYear();
-                return `${month} '${year.toString().slice(2)}`;
-            }));
+        .call(d3.axisBottom(x));
 
     svg.append('g')
         .call(d3.axisLeft(y)
-            .tickFormat(d => `${(d / 1000).toFixed(0)}kB`));
+            .tickFormat(d => `${(d / 1000).toFixed(1)}kB`));
 
     // Add line path
-    const path = svg.append('path')
-        .datum(processedData)
+    svg.append('path')
+        .datum(data)
         .attr('fill', 'none')
         .attr('stroke', '#3498db')
         .attr('stroke-width', 2)
         .attr('d', line);
 
-    // Add animation
-    const pathLength = path.node().getTotalLength();
-    path
-        .attr('stroke-dasharray', pathLength)
-        .attr('stroke-dashoffset', pathLength)
-        .transition()
-        .duration(2000)
-        .attr('stroke-dashoffset', 0);
-
     // Add tooltip
     const tooltip = d3.select(container)
         .append('div')
-        .attr('class', 'graph-tooltip')
+        .attr('class', 'tooltip')
         .style('opacity', 0)
         .style('position', 'absolute')
-        .style('background', '#2c3e50')
+        .style('background-color', '#2c3e50')
         .style('color', '#ecf0f1')
-        .style('padding', '8px')
         .style('border', '1px solid #34495e')
+        .style('padding', '10px')
         .style('border-radius', '4px')
         .style('pointer-events', 'none')
-        .style('z-index', '10');
+        .style('z-index', '10')
+        .style('font-size', '14px');
 
-    // Add interactive points
+    // Add dots for each data point
     svg.selectAll('.dot')
-        .data(processedData)
+        .data(data)
         .enter()
         .append('circle')
         .attr('class', 'dot')
@@ -110,15 +95,30 @@ export function renderXPOverTime(container, data) {
         .attr('cy', d => y(d.xp))
         .attr('r', 4)
         .attr('fill', '#3498db')
-        .on('mouseover', (event, d) => {
+        .on('mouseover', function(event, d) {
+            d3.select(this)
+                .attr('r', 6)
+                .attr('fill', '#2980b9');
+
             tooltip.transition()
                 .duration(200)
                 .style('opacity', .9);
-            tooltip.html(`Date: ${d.date.toLocaleDateString()}<br/>XP: ${(d.xp / 1000).toFixed(0)}kB`)
-                .style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 28) + 'px');
+
+            const formatDate = d3.timeFormat('%Y-%m-%d %H:%M');
+            tooltip.html(
+                `Project: ${d.project}<br/>` +
+                `XP: ${(d.amount / 1000).toFixed(1)}kB<br/>` +
+                `Total: ${(d.xp / 1000).toFixed(1)}kB<br/>` +
+                `Date: ${formatDate(d.date)}`
+            )
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px');
         })
-        .on('mouseout', () => {
+        .on('mouseout', function() {
+            d3.select(this)
+                .attr('r', 4)
+                .attr('fill', '#3498db');
+
             tooltip.transition()
                 .duration(500)
                 .style('opacity', 0);

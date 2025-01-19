@@ -1,8 +1,12 @@
 export class GraphQLClient {
-    constructor(token) {
+    constructor() {
         this.endpoint = 'https://learn.reboot01.com/api/graphql-engine/v1/graphql';
+        this.token = null;
+    }
+
+    setToken(token) {
         this.token = token;
-        console.log('GraphQL Client initialized with token:', token); // Debug log
+        console.log('GraphQL Client token updated:', token);
     }
 
     async query(query, variables) {
@@ -40,10 +44,16 @@ export class GraphQLClient {
 }
 
 export const GET_USER_DATA = `
-  query($userId: Int!) {
-    user(where: { id: { _eq: $userId } }) {
+  query($userId: Int!, $eventId: Int!) {
+    user(where: {id: {_eq: $userId}}) {
       id
       login
+      firstName
+      lastName
+      email
+      auditRatio
+      totalUp
+      totalDown
       xp_transactions: transactions(
         where: { 
           userId: { _eq: $userId },
@@ -62,58 +72,50 @@ export const GET_USER_DATA = `
           type
         }
       }
-      recent_audits: transactions(
+      audits: audits_aggregate(
         where: {
-          userId: { _eq: $userId },
-          type: { _eq: "up" }
+          auditorId: {_eq: $userId},
+          grade: {_is_null: false}
         },
-        order_by: { createdAt: desc }
-      ) {
-        id
-        amount
-        createdAt
-        path
-        object {
-          id
-          name
-        }
-      }
-      progresses(
-        where: { 
-          userId: { _eq: $userId },
-          object: { type: { _eq: "project" } }
-        },
-        order_by: { updatedAt: desc }
-      ) {
-        id
-        grade
-        createdAt
-        updatedAt
-        object {
-          id
-          name
-          type
-        }
-        path
-      }
-      audits_aggregate(
-        where: { 
-          auditorId: { _eq: $userId }
-        },
-        order_by: { endAt: desc }
+        order_by: {createdAt: desc}
       ) {
         nodes {
+          id
           grade
           createdAt
-          closedAt
-          endAt
           group {
+            captainLogin
             object {
               name
             }
           }
         }
       }
+      progresses(where: { userId: { _eq: $userId }, object: { type: { _eq: "project" } } }, order_by: {updatedAt: desc}) {
+        id
+        object {
+          id
+          name
+          type
+        }
+        grade
+        createdAt
+        updatedAt
+      }
+      skills: transactions(
+        where: {
+          userId: {_eq: $userId},
+          type: {_like: "skill_%"},
+          amount: {_gt: 0}
+        }
+        order_by: [{amount: desc}]
+      ) {
+        type
+        amount
+      }
+    }
+    event_user(where: { userId: { _eq: $userId }, eventId: {_eq: $eventId}}) {
+      level
     }
   }
 `;

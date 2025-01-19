@@ -415,3 +415,66 @@ select:focus {
 .error {
     color: var(--error-color);
 }
+
+/* List controls */
+.list-controls {
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.show-more-btn,
+.show-less-btn {
+    background-color: #2c3e50;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.show-more-btn:hover,
+.show-less-btn:hover {
+    background-color: #34495e;
+}
+
+/* Audit ratio styles */
+.audit-ratio-item {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+    gap: 10px;
+}
+
+.audit-ratio-label {
+    width: 80px;
+    color: var(--text-color);
+}
+
+.audit-ratio-value {
+    width: 80px;
+    color: var(--text-color);
+}
+
+.audit-ratio-bar-container {
+    flex-grow: 1;
+    height: 20px;
+    background-color: var(--background-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.audit-ratio-bar {
+    height: 100%;
+    background-color: var(--secondary-color);
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.audit-ratio {
+    margin-top: 15px;
+    text-align: right;
+    color: var(--text-color);
+    font-weight: bold;
+}

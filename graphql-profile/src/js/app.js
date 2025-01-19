@@ -15,10 +15,14 @@ class App {
      */
     constructor() {
         this.token = localStorage.getItem('token');
-        this.client = null;
+        this.client = new GraphQLClient();
         this.data = null;
         this.setupEventListeners();
         this.checkAuth();
+        
+        // Store the full lists
+        this.allAudits = [];
+        this.allProjects = [];
     }
 
     /**
@@ -29,6 +33,137 @@ class App {
         document.getElementById('login-form').addEventListener('submit', (e) => this.handleLogin(e));
         document.getElementById('logout-btn').addEventListener('click', () => this.handleLogout());
         document.getElementById('graph-type').addEventListener('change', (e) => this.handleGraphChange(e));
+        
+        // Add show more/less event listeners
+        document.getElementById('show-more-projects').addEventListener('click', () => this.toggleProjectsList(true));
+        document.getElementById('show-less-projects').addEventListener('click', () => this.toggleProjectsList(false));
+        document.getElementById('show-more-audits').addEventListener('click', () => this.toggleAuditsList(true));
+        document.getElementById('show-less-audits').addEventListener('click', () => this.toggleAuditsList(false));
+    }
+
+    /**
+     * Toggle the projects list to show more or less
+     * @param {boolean} showAll - Whether to show all projects or not
+     */
+    toggleProjectsList(showAll) {
+        const tbody = document.getElementById('projects-tbody');
+        const showMoreBtn = document.getElementById('show-more-projects');
+        const showLessBtn = document.getElementById('show-less-projects');
+        
+        if (showAll) {
+            this.renderProjectsList(this.allProjects, true);
+            showMoreBtn.classList.add('hidden');
+            showLessBtn.classList.remove('hidden');
+        } else {
+            this.renderProjectsList(this.allProjects, false);
+            showMoreBtn.classList.remove('hidden');
+            showLessBtn.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Toggle the audits list to show more or less
+     * @param {boolean} showAll - Whether to show all audits or not
+     */
+    toggleAuditsList(showAll) {
+        const tbody = document.getElementById('audits-tbody');
+        const showMoreBtn = document.getElementById('show-more-audits');
+        const showLessBtn = document.getElementById('show-less-audits');
+        
+        if (showAll) {
+            this.renderRecentAudits(this.allAudits, true);
+            showMoreBtn.classList.add('hidden');
+            showLessBtn.classList.remove('hidden');
+        } else {
+            this.renderRecentAudits(this.allAudits, false);
+            showMoreBtn.classList.remove('hidden');
+            showLessBtn.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Render the list of recent projects
+     * @param {Array} progresses - Array of project progresses
+     * @param {boolean} showAll - Whether to show all projects or not
+     */
+    renderProjectsList(progresses, showAll = false) {
+        const tbody = document.getElementById('projects-tbody');
+        if (!tbody) return;
+
+        // Store all projects
+        // Filter out duplicates based on object.id
+        this.allProjects = progresses.filter((progress, index, self) =>
+            index === self.findIndex(p => p.object.id === progress.object.id)
+        );
+
+        // Clear existing content
+        tbody.innerHTML = '';
+
+        // Sort by updatedAt in descending order (newest first)
+        const sortedProjects = [...this.allProjects].sort((a, b) => 
+            new Date(b.updatedAt) - new Date(a.updatedAt)
+        );
+
+        // Determine how many items to show
+        const projectsToShow = showAll ? sortedProjects : sortedProjects.slice(0, 10);
+
+        projectsToShow.forEach(progress => {
+            const row = document.createElement('tr');
+            const date = new Date(progress.updatedAt).toLocaleDateString();
+            const status = progress.grade !== null ? 'Passed' : 'In Progress';
+
+            row.innerHTML = `
+                <td>${progress.object.name}</td>
+                <td>${date}</td>
+                <td class="${status.toLowerCase().replace(' ', '-')}">${status}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Show/hide the show more button based on the number of records
+        const showMoreBtn = document.getElementById('show-more-projects');
+        if (showMoreBtn) {
+            showMoreBtn.classList.toggle('hidden', sortedProjects.length <= 10 || showAll);
+        }
+    }
+
+    /**
+     * Render the list of recent audits
+     * @param {Array} audits - Array of recent audits
+     * @param {boolean} showAll - Whether to show all audits or not
+     */
+    renderRecentAudits(audits, showAll = false) {
+        const tbody = document.getElementById('audits-tbody');
+        if (!tbody) return;
+
+        // Store all audits
+        this.allAudits = audits;
+
+        // Clear existing content
+        tbody.innerHTML = '';
+
+        // Determine how many items to show
+        const auditsToShow = showAll ? audits : audits.slice(0, 10);
+
+        auditsToShow.forEach(audit => {
+            const row = document.createElement('tr');
+            const date = new Date(audit.createdAt).toLocaleDateString();
+            const projectName = audit.group?.object?.name || 'Unknown Project';
+            const status = audit.grade >= 1 ? 'Passed' : 'Failed';
+
+            row.innerHTML = `
+                <td>${projectName}</td>
+                <td>${date}</td>
+                <td class="${status.toLowerCase()}">${status}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Show/hide the show more button based on the number of records
+        const showMoreBtn = document.getElementById('show-more-audits');
+        if (showMoreBtn) {
+            showMoreBtn.classList.toggle('hidden', audits.length <= 10 || showAll);
+        }
     }
 
     /**
@@ -36,7 +171,7 @@ class App {
      */
     checkAuth() {
         if (this.token) {
-            this.client = new GraphQLClient(this.token);
+            this.client.setToken(this.token);
             this.showProfile();
         } else {
             this.showLogin();
@@ -72,7 +207,7 @@ class App {
 
             localStorage.setItem('token', token);
             this.token = token;
-            this.client = new GraphQLClient(token);
+            this.client.setToken(token);
             this.showProfile();
         } catch (error) {
             console.error('Login failed:', error);
@@ -86,7 +221,7 @@ class App {
     handleLogout() {
         localStorage.removeItem('token');
         this.token = null;
-        this.client = null;
+        this.client.setToken(null);
         this.showLogin();
     }
 
@@ -104,7 +239,8 @@ class App {
     showProfile() {
         document.getElementById('login-container').classList.add('hidden');
         document.getElementById('profile-container').classList.remove('hidden');
-        this.loadProfileData();
+        // Wait for DOM to be ready before loading data
+        setTimeout(() => this.loadProfileData(), 0);
     }
 
     /**
@@ -114,118 +250,119 @@ class App {
     async loadProfileData() {
         try {
             const userId = this.getUserIdFromToken();
-            if (!userId) {
-                throw new Error('No valid user ID found in token');
-            }
+            const eventId = 20;
+            const userData = await this.client.query(GET_USER_DATA, { 
+                userId, 
+                eventId 
+            });
+            
+            console.log('Profile data loaded:', userData);
 
-            const result = await this.client.query(GET_USER_DATA, { userId });
-            console.log('Profile data loaded:', result);
-
-            if (result.data?.user?.length > 0) {
-                const userData = result.data.user[0];
-                this.data = result.data;
+            if (userData.data?.user?.[0]) {
+                const user = userData.data.user[0];
+                this.data = userData.data;
                 
-                // Update basic info
-                this.renderBasicInfo(userData);
-                this.renderXPInfo(userData.xp_transactions);
+                // Log audit ratio data
+                console.log('Audit ratio data:', {
+                    totalUp: user.totalUp,
+                    totalDown: user.totalDown,
+                    auditRatio: user.auditRatio
+                });
+
+                // Update basic info with extended user data
+                this.renderBasicInfo(user);
+                
+                // Ensure DOM is ready before rendering audit ratio
+                requestAnimationFrame(() => {
+                    console.log('Rendering audit ratio with data:', {
+                        totalUp: user.totalUp,
+                        totalDown: user.totalDown,
+                        auditRatio: user.auditRatio
+                    });
+                    this.renderAuditRatio(user);
+                });
+                
+                // Calculate and display XP progress using all xp_transactions
+                if (user.xp_transactions) {
+                    console.log('Total number of XP transactions:', user.xp_transactions.length);
+                    
+                    // Log details of each transaction
+                    user.xp_transactions.forEach((t, index) => {
+                        console.log(`Transaction ${index + 1}:`, {
+                            id: t.id,
+                            amount: t.amount,
+                            date: new Date(t.createdAt).toLocaleString(),
+                            path: t.path,
+                            objectType: t.object?.type,
+                            objectName: t.object?.name
+                        });
+                    });
+
+                    const totalXP = user.xp_transactions.reduce((sum, t) => sum + t.amount, 0);
+                    console.log('Calculated total XP:', totalXP);
+                    
+                    // Update XP information in kB format
+                    const totalXpElement = document.getElementById('total-xp');
+                    const projectsCompletedElement = document.getElementById('projects-completed');
+                    
+                    if (totalXpElement) {
+                        // Don't convert to bytes first, amount is already in bytes
+                        totalXpElement.textContent = this.formatFileSize(totalXP);
+                    }
+                    if (projectsCompletedElement && user.progresses) {
+                        const uniqueProjects = new Set(user.progresses.filter(p => p.grade !== null).map(p => p.object.id));
+                        projectsCompletedElement.textContent = uniqueProjects.size;
+                    }
+
+                    // Render XP graph using all transactions
+                    const xpGraphContainer = document.getElementById('graph');
+                    const graphType = document.getElementById('graph-type');
+                    if (xpGraphContainer && graphType && graphType.value === 'xp') {
+                        renderXPOverTime(xpGraphContainer, user.xp_transactions);
+                    }
+                }
                 
                 // Update projects list
-                if (userData.progresses) {
-                    this.renderProjectsList(userData.progresses);
+                if (user.progresses) {
+                    this.renderProjectsList(user.progresses);
                 }
 
-                // Update audit stats and list
-                if (userData.recent_audits && userData.audits_aggregate?.nodes) {
-                    console.log('Initial arrays length:', {
-                        recent_audits: userData.recent_audits.length,
-                        audit_nodes: userData.audits_aggregate.nodes.length
+                // Update audit statistics
+                if (user.audits) {
+                    const sortedAudits = user.audits.nodes
+                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                    this.updateAuditStats({
+                        total: sortedAudits.length,
+                        passed: sortedAudits.filter(audit => audit.grade >= 1).length,
+                        failed: sortedAudits.filter(audit => audit.grade < 1).length,
+                        totalUp: user.totalUp,
+                        totalDown: user.totalDown
                     });
-
-                    const currentDate = new Date('2025-01-16T23:56:44+03:00');
-
-                    // Filter out invalid audit nodes (future dates, null grades)
-                    const validAuditNodes = userData.audits_aggregate.nodes.filter(node => {
-                        const nodeDate = new Date(node.createdAt);
-                        return node.grade !== null && 
-                               nodeDate <= currentDate &&
-                               (node.group?.object?.name || node.path);
-                    });
-
-                    console.log('Valid audit nodes after filtering:', validAuditNodes.length);
-
-                    // Sort both arrays by date descending
-                    const sortedAggregateAudits = [...validAuditNodes].sort(
-                        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-                    );
-                    
-                    // Filter and sort recent audits
-                    const validRecentAudits = userData.recent_audits.filter(audit => {
-                        const auditDate = new Date(audit.createdAt);
-                        return auditDate <= currentDate;
-                    });
-
-                    console.log('Valid recent audits after filtering:', validRecentAudits.length);
-
-                    // Create audits array with all passed initially
-                    const audits = [...validRecentAudits]
-                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                        .map(audit => ({
-                            ...audit,
-                            status: 'passed'
-                        }));
-
-                    // Match based on array index for failed grades
-                    sortedAggregateAudits.forEach((aggregateAudit, index) => {
-                        if (aggregateAudit.grade === 0 && index < audits.length) {
-                            console.log('Marking as failed:', {
-                                index,
-                                aggregateAudit: {
-                                    project: aggregateAudit.group?.object?.name,
-                                    date: aggregateAudit.createdAt,
-                                    grade: aggregateAudit.grade
-                                },
-                                matchedAudit: {
-                                    project: audits[index].object?.name || audits[index].path,
-                                    date: audits[index].createdAt
-                                }
-                            });
-                            audits[index].status = 'failed';
-                        }
-                    });
-
-                    // Calculate stats
-                    const totalAudits = audits.length;
-                    const passedAuditsCount = audits.filter(audit => audit.status === 'passed').length;
-                    const failedAuditsCount = totalAudits - passedAuditsCount;
-                    const successRate = totalAudits > 0 ? (passedAuditsCount / totalAudits * 100) : 0;
-
-                    console.log('Final stats:', {
-                        total: totalAudits,
-                        passed: passedAuditsCount,
-                        failed: failedAuditsCount,
-                        rate: successRate
-                    });
-
-                    // Update stats display
-                    document.getElementById('total-audits').textContent = totalAudits;
-                    document.getElementById('passed-audits').textContent = passedAuditsCount;
-                    document.getElementById('failed-audits').textContent = failedAuditsCount;
-                    document.getElementById('success-rate').textContent = successRate.toFixed(1) + '%';
-
-                    // Render recent audits (only show 10 most recent)
-                    const recentAudits = audits.slice(0, 10);
-                    this.renderRecentAudits(recentAudits);
+                    this.renderRecentAudits(sortedAudits);
                 }
 
-                // Initialize graph with XP data
-                this.renderXPProgress(userData.xp_transactions);
-            } else {
-                console.error('No user data found in response:', result);
-                document.getElementById('error-message').textContent = 'Failed to load user data';
+                // Render skills information
+                if (user.skills) {
+                    this.renderSkills(user.skills);
+                }
+
+                // Update level if available
+                const level = userData.data.event_user?.[0]?.level;
+                const userLevelElement = document.getElementById('user-level');
+                if (level && userLevelElement) {
+                    userLevelElement.textContent = `${level.toFixed(2)}`;
+                }
+
+                // Show the profile container
+                const profileContainer = document.getElementById('profile-container');
+                if (profileContainer) {
+                    profileContainer.style.display = 'block';
+                }
             }
         } catch (error) {
             console.error('Failed to load profile data:', error);
-            document.getElementById('error-message').textContent = 'Failed to load profile data: ' + error.message;
+            // Handle error appropriately
         }
     }
 
@@ -257,7 +394,7 @@ class App {
             if (error.message === 'JWTExpired') {
                 localStorage.removeItem('token');
                 this.token = null;
-                this.client = null;
+                this.client.setToken(null);
                 document.getElementById('error-message').textContent = 'Your session has expired. Please log in again.';
                 this.showLogin();
             } else {
@@ -273,118 +410,14 @@ class App {
      * @param {Object} user - User data containing login and id
      */
     renderBasicInfo(user) {
-        // User data comes as an array, get the first user
-        const userData = Array.isArray(user) ? user[0] : user;
-        
-        if (!userData?.login) {
-            console.error('No valid user data available:', user);
-            return;
-        }
-        
-        document.getElementById('user-login').textContent = userData.login;
-        document.getElementById('user-id').textContent = userData.id;
-        console.log('User info rendered:', userData);
-    }
+        const basicInfoContainer = document.getElementById('basic-info');
+        if (!basicInfoContainer) return;
 
-    /**
-     * Render XP-related information
-     * @param {Array} transactions - Array of XP transactions
-     */
-    renderXPInfo(transactions) {
-        if (!Array.isArray(transactions)) {
-            console.error('Invalid XP data structure:', transactions);
-            document.getElementById('total-xp').textContent = '0kB';
-            document.getElementById('projects-completed').textContent = '0';
-            return;
-        }
-
-        const totalXP = transactions.reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
-        const completedProjects = transactions.length;
-
-        document.getElementById('total-xp').textContent = `${(totalXP / 1000).toFixed(0)}kB`;
-        document.getElementById('projects-completed').textContent = completedProjects;
-
-        console.log('XP Info:', {
-            totalXP,
-            completedProjects,
-            transactionsCount: transactions.length
-        });
-    }
-
-    /**
-     * Render the list of recent projects
-     * @param {Array} progresses - Array of project progresses
-     */
-    renderProjectsList(progresses) {
-        const projectsTbody = document.getElementById('projects-tbody');
-        if (!projectsTbody || !progresses) return;
-
-        projectsTbody.innerHTML = '';
-        
-        // Take first 10 projects (already sorted by date desc from GraphQL)
-        const recentProjects = progresses.slice(0, 10);
-
-        recentProjects.forEach(project => {
-            const row = document.createElement('tr');
-            
-            // Check if it's a valid project
-            if (!project.object?.type === 'project') return;
-            
-            let status;
-            if (project.grade === null) {
-                status = 'In Progress';
-            } else if (project.grade > 0) {
-                status = 'Passed';
-            } else {
-                status = 'Failed';
-            }
-            
-            const date = new Date(project.updatedAt).toLocaleDateString();
-            row.innerHTML = `
-                <td>${project.object.name}</td>
-                <td>${date}</td>
-                <td class="${status.toLowerCase().replace(' ', '-')}">${status}</td>
-            `;
-            projectsTbody.appendChild(row);
-        });
-    }
-
-    /**
-     * Render the list of recent audits
-     * @param {Array} audits - Array of recent audits
-     * @param {Array} progresses - Array of progresses
-     */
-    renderRecentAudits(audits, progresses) {
-        const auditsTbody = document.getElementById('audits-tbody');
-        if (!auditsTbody) return;
-
-        auditsTbody.innerHTML = '';
-        
-        // Audits are already sorted and limited by the GraphQL query
-        audits.forEach(audit => {  
-            const row = document.createElement('tr');
-            
-            // Format the date
-            const date = new Date(audit.createdAt).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            });
-            
-            // Extract XP amount from audit
-            const xpAmount = audit.amount || 0;
-            const status = xpAmount > 0 ? 'Passed' : 'Failed';
-            
-            // Get project name from the path
-            const projectName = audit.object?.name || audit.path.split('/').pop() || 'Unknown Project';
-            
-            row.innerHTML = `
-                <td>${projectName}</td>
-                <td>${date}</td>
-                <td class="${status.toLowerCase()}">${status}</td>
-            `;
-            auditsTbody.appendChild(row);
-        });
+        basicInfoContainer.innerHTML = `
+            <h2>${user.firstName} ${user.lastName}</h2>
+            <p>Login: ${user.login}</p>
+            <p>Email: ${user.email}</p>
+        `;
     }
 
     /**
@@ -394,9 +427,10 @@ class App {
     renderAuditInfo(result) {
         console.log('Audit data:', result); // Debug log
         
-        const totalAudits = result.user?.[0]?.all_audits?.aggregate?.count || 0;
-        const passed = result.user?.[0]?.passed_audits?.aggregate?.count || 0;
-        const failed = result.user?.[0]?.failed_audits?.aggregate?.count || 0;
+        const totalAudits = result.audits.length;
+        const passed = result.audits.filter(audit => audit.grade >= 1).length;
+        const failed = totalAudits - passed;
+        const successRate = totalAudits > 0 ? ((passed / totalAudits) * 100).toFixed(1) : '0.0';
 
         console.log('Calculated audit stats:', { totalAudits, passed, failed }); // Debug log
 
@@ -404,8 +438,52 @@ class App {
         document.getElementById('passed-audits').textContent = passed;
         document.getElementById('failed-audits').textContent = failed;
 
-        const successRate = totalAudits > 0 ? ((passed / totalAudits) * 100).toFixed(1) : '0.0';
-        document.getElementById('success-rate').textContent = `${successRate}%`;
+        const successRateElement = document.getElementById('success-rate');
+        if (successRateElement) {
+            successRateElement.textContent = `${successRate}%`;
+        }
+    }
+
+    /**
+     * Render skills information
+     * @param {Array} skills - Array of skills
+     */
+    renderSkills(skills) {
+        const skillsContainer = document.getElementById('skills-container');
+        if (!skillsContainer) return;
+
+        const skillsList = skills.map(skill => {
+            const skillName = skill.type.replace('skill_', '').toUpperCase();
+            return `
+                <div class="skill-item">
+                    <span class="skill-name">${skillName}</span>
+                    <span class="skill-level">${skill.amount}</span>
+                </div>
+            `;
+        }).join('')
+
+        skillsContainer.innerHTML = `
+            <h3>Skills</h3>
+            <div class="skills-list">
+                ${skillsList}
+            </div>
+        `;
+    }
+
+    /**
+     * Render level information
+     * @param {Object} eventUser - Event user data
+     */
+    renderLevelInfo(eventUser) {
+        const levelContainer = document.getElementById('level-info');
+        if (!levelContainer) return;
+
+        levelContainer.innerHTML = `
+            <div class="level-display">
+                <h3>Current Level</h3>
+                <span class="level-number">${eventUser.level}</span>
+            </div>
+        `;
     }
 
     /**
@@ -413,32 +491,23 @@ class App {
      * @param {Event} e - Dropdown change event
      */
     handleGraphChange(e) {
-        const type = e.target.value;
-        const graphContainer = document.getElementById('graph');
-        
-        if (type === 'ratio') {
-            const passed = parseInt(document.getElementById('passed-audits').textContent) || 0;
-            const failed = parseInt(document.getElementById('failed-audits').textContent) || 0;
+        const graphType = e.target.value;
+        const container = document.getElementById('graph');
+        container.innerHTML = ''; // Clear the current graph
+
+        if (this.data?.user?.[0]) {
+            const userData = this.data.user[0];
             
-            // Only render if we have valid data
-            if (passed > 0 || failed > 0) {
-                const data = [
+            if (graphType === 'xp') {
+                renderXPOverTime(container, userData.xp_transactions);
+            } else if (graphType === 'ratio') {
+                const passed = userData.progresses.filter(p => p.grade >= 1).length;
+                const failed = userData.progresses.filter(p => p.grade !== null && p.grade < 1).length;
+                const ratioData = [
                     { label: 'Passed', value: passed },
                     { label: 'Failed', value: failed }
                 ];
-                renderProjectRatio(graphContainer, data);
-            } else {
-                console.error('No valid audit data available');
-                graphContainer.innerHTML = '<div class="error-message">No audit data available</div>';
-            }
-        } else {
-            // For XP progress graph
-            const transactions = this.data?.user?.transactions || [];
-            if (transactions.length > 0) {
-                renderXPOverTime(graphContainer, transactions);
-            } else {
-                console.error('No XP transaction data available');
-                graphContainer.innerHTML = '<div class="error-message">No XP data available</div>';
+                renderProjectRatio(container, ratioData);
             }
         }
     }
@@ -525,7 +594,100 @@ class App {
         // Update graph when type changes
         graphTypeSelect.addEventListener('change', renderGraph);
     }
+
+    formatFileSize(bytes) {
+        const kb = bytes / 1000;
+        if (kb >= 1000) {
+            return `${Math.floor(kb / 1000)}MB`;
+        }
+        return `${Math.floor(kb)}kB`;
+    }
+
+    renderAuditRatio(user) {
+        // Get all required DOM elements first using IDs
+        const elements = {
+            upBar: document.getElementById('up-bar'),
+            downBar: document.getElementById('down-bar'),
+            upValue: document.getElementById('up-value'),
+            downValue: document.getElementById('down-value'),
+            ratioValue: document.getElementById('ratio-value')
+        };
+
+        // Log found elements for debugging
+        console.log('Found DOM elements:', {
+            upBarExists: !!elements.upBar,
+            downBarExists: !!elements.downBar,
+            upValueExists: !!elements.upValue,
+            downValueExists: !!elements.downValue,
+            ratioValueExists: !!elements.ratioValue
+        });
+
+        // Check if all elements exist
+        const missingElements = Object.entries(elements)
+            .filter(([key, element]) => !element)
+            .map(([key]) => key);
+
+        if (missingElements.length > 0) {
+            console.error('Missing DOM elements:', missingElements);
+            return;
+        }
+
+        // Parse values as numbers and handle null/undefined
+        const totalUp = user.totalUp ? parseInt(user.totalUp) : 0;
+        const totalDown = user.totalDown ? parseInt(user.totalDown) : 0;
+
+        console.log('Processing audit ratio:', {
+            rawTotalUp: user.totalUp,
+            rawTotalDown: user.totalDown,
+            parsedTotalUp: totalUp,
+            parsedTotalDown: totalDown
+        });
+        
+        // Calculate ratio with one decimal place
+        const ratio = totalDown > 0 ? (totalUp / totalDown).toFixed(1) : '0.0';
+
+        // Format size to show kB or MB as appropriate
+        const formatSize = bytes => {
+            const kb = bytes / 1024;
+            if (kb < 1024) {
+                // Less than 1MB, show as kB
+                return `${Math.round(kb)} kB`;
+            } else {
+                // 1MB or more, show as MB with 2 decimal places
+                return `${(kb / 1024).toFixed(2)} MB`;
+            }
+        };
+        
+        // Update text values
+        elements.upValue.textContent = formatSize(totalUp);
+        elements.downValue.textContent = formatSize(totalDown);
+        elements.ratioValue.textContent = `Ratio: ${ratio}`;
+
+        // Calculate bar widths
+        const maxValue = Math.max(totalUp, totalDown);
+        if (maxValue > 0) {
+            const upWidth = (totalUp / maxValue * 100);
+            const downWidth = (totalDown / maxValue * 100);
+            console.log('Setting bar widths:', { upWidth, downWidth });
+            elements.upBar.style.width = `${upWidth}%`;
+            elements.downBar.style.width = `${downWidth}%`;
+        } else {
+            elements.upBar.style.width = '0%';
+            elements.downBar.style.width = '0%';
+        }
+
+        console.log('Audit ratio updated successfully');
+    }
+
+    updateAuditStats(stats) {
+        document.getElementById('total-audits').textContent = stats.total;
+        document.getElementById('passed-audits').textContent = stats.passed;
+        document.getElementById('failed-audits').textContent = stats.failed;
+        const successRate = (stats.passed / stats.total * 100).toFixed(1);
+        document.getElementById('success-rate').textContent = `${successRate}%`;
+    }
+
+    // Initialize the app
 }
 
-// Initialize the app
-new App();
+const app = new App();
