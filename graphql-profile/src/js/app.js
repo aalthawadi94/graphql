@@ -238,7 +238,7 @@ class App {
             row.style.display = index >= 5 ? 'none' : ''; // Hide rows beyond the first 5
 
             const projectCell = document.createElement('td');
-            projectCell.textContent = audit.group?.path || 'Unknown Project';
+            projectCell.textContent = audit.group?.object?.name || 'Unknown Project';
 
             const dateCell = document.createElement('td');
             dateCell.textContent = new Date(audit.createdAt).toLocaleDateString();
