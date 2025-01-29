@@ -1,6 +1,6 @@
 import { default as jwtDecode } from 'https://unpkg.com/jwt-decode@3.1.2/build/jwt-decode.esm.js';
 import { GraphQLClient, GET_USER_DATA } from './graphql.js';
-import { renderXPOverTime, renderProjectRatio } from './graphs.js';
+import { renderXPOverTime, renderSkillsRadar } from './graphs.js';
 
 /**
  * Profile Dashboard Class
@@ -14,155 +14,251 @@ class App {
      * @constructor
      */
     constructor() {
-        this.token = localStorage.getItem('token');
         this.client = new GraphQLClient();
-        this.data = null;
         this.setupEventListeners();
-        this.checkAuth();
         
-        // Store the full lists
-        this.allAudits = [];
-        this.allProjects = [];
+        // Check for token in localStorage first
+        const token = localStorage.getItem('token');
+        if (token) {
+            this.client.setToken(token);
+            this.loadProfileData();
+            this.showProfile();
+        } else {
+            // Only redirect if no token found
+            this.showLogin();
+        }
     }
 
     /**
-     * Set up event listeners for interactive elements
-     * Primarily handles the graph type selection dropdown
+     * Set up event listeners for login form
      */
     setupEventListeners() {
-        document.getElementById('login-form').addEventListener('submit', (e) => this.handleLogin(e));
-        document.getElementById('logout-btn').addEventListener('click', () => this.handleLogout());
-        document.getElementById('graph-type').addEventListener('change', (e) => this.handleGraphChange(e));
-        
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleLogin();
+            });
+        }
+
+        const logoutButton = document.getElementById('logout');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => this.handleLogout());
+        }
+
         // Add show more/less event listeners
-        document.getElementById('show-more-projects').addEventListener('click', () => this.toggleProjectsList(true));
-        document.getElementById('show-less-projects').addEventListener('click', () => this.toggleProjectsList(false));
-        document.getElementById('show-more-audits').addEventListener('click', () => this.toggleAuditsList(true));
-        document.getElementById('show-less-audits').addEventListener('click', () => this.toggleAuditsList(false));
+        const showMoreProjects = document.getElementById('show-more-projects');
+        const showLessProjects = document.getElementById('show-less-projects');
+        const showMoreAudits = document.getElementById('show-more-audits');
+        const showLessAudits = document.getElementById('show-less-audits');
+
+        if (showMoreProjects) {
+            showMoreProjects.addEventListener('click', () => this.toggleProjectsList(true));
+        }
+        if (showLessProjects) {
+            showLessProjects.addEventListener('click', () => this.toggleProjectsList(false));
+        }
+        if (showMoreAudits) {
+            showMoreAudits.addEventListener('click', () => this.toggleAuditsList(true));
+        }
+        if (showLessAudits) {
+            showLessAudits.addEventListener('click', () => this.toggleAuditsList(false));
+        }
     }
 
     /**
-     * Toggle the projects list to show more or less
-     * @param {boolean} showAll - Whether to show all projects or not
+     * Toggle the visibility of projects in the list
+     * @param {boolean} showMore - Whether to show more or less projects
      */
-    toggleProjectsList(showAll) {
+    toggleProjectsList(showMore) {
         const tbody = document.getElementById('projects-tbody');
+        const rows = tbody.getElementsByTagName('tr');
         const showMoreBtn = document.getElementById('show-more-projects');
         const showLessBtn = document.getElementById('show-less-projects');
-        
-        if (showAll) {
-            this.renderProjectsList(this.allProjects, true);
-            showMoreBtn.classList.add('hidden');
-            showLessBtn.classList.remove('hidden');
-        } else {
-            this.renderProjectsList(this.allProjects, false);
-            showMoreBtn.classList.remove('hidden');
-            showLessBtn.classList.add('hidden');
+
+        // Show all rows if showMore is true, otherwise only show first 5
+        for (let i = 5; i < rows.length; i++) {
+            rows[i].style.display = showMore ? '' : 'none';
+        }
+
+        // Toggle button visibility
+        showMoreBtn.classList.toggle('hidden', showMore);
+        showLessBtn.classList.toggle('hidden', !showMore);
+    }
+
+    /**
+     * Toggle the visibility of audits in the list
+     * @param {boolean} showMore - Whether to show more or less audits
+     */
+    toggleAuditsList(showMore) {
+        const tbody = document.getElementById('audits-tbody');
+        const rows = tbody.getElementsByTagName('tr');
+        const showMoreBtn = document.getElementById('show-more-audits');
+        const showLessBtn = document.getElementById('show-less-audits');
+
+        // Show all rows if showMore is true, otherwise only show first 5
+        for (let i = 5; i < rows.length; i++) {
+            rows[i].style.display = showMore ? '' : 'none';
+        }
+
+        // Toggle button visibility
+        showMoreBtn.classList.toggle('hidden', showMore);
+        showLessBtn.classList.toggle('hidden', !showMore);
+    }
+
+    /**
+     * Show the login form
+     */
+    showLogin() {
+        document.getElementById('login-section')?.classList.remove('hidden');
+        document.getElementById('profile-section')?.classList.add('hidden');
+    }
+
+    /**
+     * Show the profile section
+     */
+    showProfile() {
+        document.getElementById('login-section')?.classList.add('hidden');
+        document.getElementById('profile-section')?.classList.remove('hidden');
+    }
+
+    /**
+     * Handle login form submission
+     */
+    async handleLogin() {
+        try {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Create credentials string
+            const credentials = btoa(`${username}:${password}`);
+
+            const response = await fetch('https://learn.reboot01.com/api/auth/signin', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Basic ${credentials}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                console.error('Login response error:', errorData);
+                throw new Error('Login failed');
+            }
+
+            const token = await response.text();
+            if (!token) {
+                throw new Error('No token received');
+            }
+
+            // Store the cleaned token
+            const cleanToken = token.trim().replace(/^["']|["']$/g, '');
+            localStorage.setItem('token', cleanToken);
+            this.client.setToken(cleanToken);
+            
+            // Load profile data before showing profile
+            await this.loadProfileData();
+            
+            // Show profile section
+            this.showProfile();
+            
+            // Clear login form
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('error-message').textContent = '';
+        } catch (error) {
+            console.error('Login error:', error);
+            document.getElementById('error-message').textContent = 'Login failed. Please check your credentials.';
         }
     }
 
     /**
-     * Toggle the audits list to show more or less
-     * @param {boolean} showAll - Whether to show all audits or not
+     * Handle logout button click
      */
-    toggleAuditsList(showAll) {
-        const tbody = document.getElementById('audits-tbody');
-        const showMoreBtn = document.getElementById('show-more-audits');
-        const showLessBtn = document.getElementById('show-less-audits');
-        
-        if (showAll) {
-            this.renderRecentAudits(this.allAudits, true);
-            showMoreBtn.classList.add('hidden');
-            showLessBtn.classList.remove('hidden');
-        } else {
-            this.renderRecentAudits(this.allAudits, false);
-            showMoreBtn.classList.remove('hidden');
-            showLessBtn.classList.add('hidden');
-        }
+    handleLogout() {
+        localStorage.removeItem('token');
+        this.client.setToken(null);
+        this.showLogin();
+        window.location.reload(); // Ensure clean state on logout
     }
 
     /**
      * Render the list of recent projects
-     * @param {Array} progresses - Array of project progresses
-     * @param {boolean} showAll - Whether to show all projects or not
+     * @param {Array} progresses - Array of project progress data
      */
-    renderProjectsList(progresses, showAll = false) {
+    renderProjectsList(progresses) {
         const tbody = document.getElementById('projects-tbody');
         if (!tbody) return;
 
-        // Store all projects
-        // Filter out duplicates based on object.id
-        this.allProjects = progresses.filter((progress, index, self) =>
-            index === self.findIndex(p => p.object.id === progress.object.id)
-        );
-
-        // Clear existing content
         tbody.innerHTML = '';
+        const sortedProjects = progresses
+            .filter(p => p.grade !== null)
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
-        // Sort by updatedAt in descending order (newest first)
-        const sortedProjects = [...this.allProjects].sort((a, b) => 
-            new Date(b.updatedAt) - new Date(a.updatedAt)
-        );
-
-        // Determine how many items to show
-        const projectsToShow = showAll ? sortedProjects : sortedProjects.slice(0, 10);
-
-        projectsToShow.forEach(progress => {
+        sortedProjects.forEach((project, index) => {
             const row = document.createElement('tr');
-            const date = new Date(progress.updatedAt).toLocaleDateString();
-            const status = progress.grade !== null ? 'Passed' : 'In Progress';
+            row.style.display = index >= 5 ? 'none' : ''; // Hide rows beyond the first 5
 
-            row.innerHTML = `
-                <td>${progress.object.name}</td>
-                <td>${date}</td>
-                <td class="${status.toLowerCase().replace(' ', '-')}">${status}</td>
-            `;
+            const nameCell = document.createElement('td');
+            nameCell.textContent = project.object.name;
+
+            const dateCell = document.createElement('td');
+            dateCell.textContent = new Date(project.updatedAt).toLocaleDateString();
+
+            const statusCell = document.createElement('td');
+            statusCell.textContent = project.grade >= 1 ? 'Passed' : 'Failed';
+            statusCell.className = project.grade >= 1 ? 'passed' : 'failed';
+
+            row.appendChild(nameCell);
+            row.appendChild(dateCell);
+            row.appendChild(statusCell);
             tbody.appendChild(row);
         });
 
-        // Show/hide the show more button based on the number of records
+        // Show/hide "Show More" button based on number of projects
         const showMoreBtn = document.getElementById('show-more-projects');
-        if (showMoreBtn) {
-            showMoreBtn.classList.toggle('hidden', sortedProjects.length <= 10 || showAll);
+        const showLessBtn = document.getElementById('show-less-projects');
+        if (showMoreBtn && showLessBtn) {
+            showMoreBtn.classList.toggle('hidden', sortedProjects.length <= 5);
+            showLessBtn.classList.add('hidden');
         }
     }
 
     /**
      * Render the list of recent audits
-     * @param {Array} audits - Array of recent audits
-     * @param {boolean} showAll - Whether to show all audits or not
+     * @param {Array} audits - Array of audit data
      */
-    renderRecentAudits(audits, showAll = false) {
+    renderRecentAudits(audits) {
         const tbody = document.getElementById('audits-tbody');
         if (!tbody) return;
 
-        // Store all audits
-        this.allAudits = audits;
-
-        // Clear existing content
         tbody.innerHTML = '';
-
-        // Determine how many items to show
-        const auditsToShow = showAll ? audits : audits.slice(0, 10);
-
-        auditsToShow.forEach(audit => {
+        audits.forEach((audit, index) => {
             const row = document.createElement('tr');
-            const date = new Date(audit.createdAt).toLocaleDateString();
-            const projectName = audit.group?.object?.name || 'Unknown Project';
-            const status = audit.grade >= 1 ? 'Passed' : 'Failed';
+            row.style.display = index >= 5 ? 'none' : ''; // Hide rows beyond the first 5
 
-            row.innerHTML = `
-                <td>${projectName}</td>
-                <td>${date}</td>
-                <td class="${status.toLowerCase()}">${status}</td>
-            `;
+            const projectCell = document.createElement('td');
+            projectCell.textContent = audit.group?.path || 'Unknown Project';
+
+            const dateCell = document.createElement('td');
+            dateCell.textContent = new Date(audit.createdAt).toLocaleDateString();
+
+            const resultCell = document.createElement('td');
+            resultCell.textContent = audit.grade >= 1 ? 'Passed' : 'Failed';
+            resultCell.className = audit.grade >= 1 ? 'passed' : 'failed';
+
+            row.appendChild(projectCell);
+            row.appendChild(dateCell);
+            row.appendChild(resultCell);
             tbody.appendChild(row);
         });
 
-        // Show/hide the show more button based on the number of records
+        // Show/hide "Show More" button based on number of audits
         const showMoreBtn = document.getElementById('show-more-audits');
-        if (showMoreBtn) {
-            showMoreBtn.classList.toggle('hidden', audits.length <= 10 || showAll);
+        const showLessBtn = document.getElementById('show-less-audits');
+        if (showMoreBtn && showLessBtn) {
+            showMoreBtn.classList.toggle('hidden', audits.length <= 5);
+            showLessBtn.classList.add('hidden');
         }
     }
 
@@ -179,228 +275,24 @@ class App {
     }
 
     /**
-     * Handle the login form submission
-     * @param {Event} e - Form submission event
-     */
-    async handleLogin(e) {
-        e.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        
-        try {
-            const credentials = btoa(`${username}:${password}`);
-            const response = await fetch('https://learn.reboot01.com/api/auth/signin', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Basic ${credentials}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Invalid credentials');
-            }
-
-            const token = await response.json();
-            if (!token) {
-                throw new Error('No token received from server');
-            }
-
-            localStorage.setItem('token', token);
-            this.token = token;
-            this.client.setToken(token);
-            this.showProfile();
-        } catch (error) {
-            console.error('Login failed:', error);
-            document.getElementById('error-message').textContent = error.message;
-        }
-    }
-
-    /**
-     * Handle the logout button click
-     */
-    handleLogout() {
-        localStorage.removeItem('token');
-        this.token = null;
-        this.client.setToken(null);
-        this.showLogin();
-    }
-
-    /**
-     * Show the login page
-     */
-    showLogin() {
-        document.getElementById('login-container').classList.remove('hidden');
-        document.getElementById('profile-container').classList.add('hidden');
-    }
-
-    /**
-     * Show the profile page
-     */
-    showProfile() {
-        document.getElementById('login-container').classList.add('hidden');
-        document.getElementById('profile-container').classList.remove('hidden');
-        // Wait for DOM to be ready before loading data
-        setTimeout(() => this.loadProfileData(), 0);
-    }
-
-    /**
-     * Main function to load and display all profile data
-     * This is the entry point for data fetching and rendering
-     */
-    async loadProfileData() {
-        try {
-            const userId = this.getUserIdFromToken();
-            const eventId = 20;
-            const userData = await this.client.query(GET_USER_DATA, { 
-                userId, 
-                eventId 
-            });
-            
-            console.log('Profile data loaded:', userData);
-
-            if (userData.data?.user?.[0]) {
-                const user = userData.data.user[0];
-                this.data = userData.data;
-                
-                // Log audit ratio data
-                console.log('Audit ratio data:', {
-                    totalUp: user.totalUp,
-                    totalDown: user.totalDown,
-                    auditRatio: user.auditRatio
-                });
-
-                // Update basic info with extended user data
-                this.renderBasicInfo(user);
-                
-                // Ensure DOM is ready before rendering audit ratio
-                requestAnimationFrame(() => {
-                    console.log('Rendering audit ratio with data:', {
-                        totalUp: user.totalUp,
-                        totalDown: user.totalDown,
-                        auditRatio: user.auditRatio
-                    });
-                    this.renderAuditRatio(user);
-                });
-                
-                // Calculate and display XP progress using all xp_transactions
-                if (user.xp_transactions) {
-                    console.log('Total number of XP transactions:', user.xp_transactions.length);
-                    
-                    // Log details of each transaction
-                    user.xp_transactions.forEach((t, index) => {
-                        console.log(`Transaction ${index + 1}:`, {
-                            id: t.id,
-                            amount: t.amount,
-                            date: new Date(t.createdAt).toLocaleString(),
-                            path: t.path,
-                            objectType: t.object?.type,
-                            objectName: t.object?.name
-                        });
-                    });
-
-                    const totalXP = user.xp_transactions.reduce((sum, t) => sum + t.amount, 0);
-                    console.log('Calculated total XP:', totalXP);
-                    
-                    // Update XP information in kB format
-                    const totalXpElement = document.getElementById('total-xp');
-                    const projectsCompletedElement = document.getElementById('projects-completed');
-                    
-                    if (totalXpElement) {
-                        // Don't convert to bytes first, amount is already in bytes
-                        totalXpElement.textContent = this.formatFileSize(totalXP);
-                    }
-                    if (projectsCompletedElement && user.progresses) {
-                        const uniqueProjects = new Set(user.progresses.filter(p => p.grade !== null).map(p => p.object.id));
-                        projectsCompletedElement.textContent = uniqueProjects.size;
-                    }
-
-                    // Render XP graph using all transactions
-                    const xpGraphContainer = document.getElementById('graph');
-                    const graphType = document.getElementById('graph-type');
-                    if (xpGraphContainer && graphType && graphType.value === 'xp') {
-                        renderXPOverTime(xpGraphContainer, user.xp_transactions);
-                    }
-                }
-                
-                // Update projects list
-                if (user.progresses) {
-                    this.renderProjectsList(user.progresses);
-                }
-
-                // Update audit statistics
-                if (user.audits) {
-                    const sortedAudits = user.audits.nodes
-                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-                    this.updateAuditStats({
-                        total: sortedAudits.length,
-                        passed: sortedAudits.filter(audit => audit.grade >= 1).length,
-                        failed: sortedAudits.filter(audit => audit.grade < 1).length,
-                        totalUp: user.totalUp,
-                        totalDown: user.totalDown
-                    });
-                    this.renderRecentAudits(sortedAudits);
-                }
-
-                // Render skills information
-                if (user.skills) {
-                    this.renderSkills(user.skills);
-                }
-
-                // Update level if available
-                const level = userData.data.event_user?.[0]?.level;
-                const userLevelElement = document.getElementById('user-level');
-                if (level && userLevelElement) {
-                    userLevelElement.textContent = `${level.toFixed(2)}`;
-                }
-
-                // Show the profile container
-                const profileContainer = document.getElementById('profile-container');
-                if (profileContainer) {
-                    profileContainer.style.display = 'block';
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load profile data:', error);
-            // Handle error appropriately
-        }
-    }
-
-    /**
      * Get the user ID from the token
      * @returns {number|null} User ID or null if token is invalid
      */
     getUserIdFromToken() {
         try {
-            const decoded = jwtDecode(this.token);
-            console.log('Decoded token:', decoded);
-            
-            // Check if token is expired
-            const currentTime = Math.floor(Date.now() / 1000);
-            if (decoded.exp && decoded.exp < currentTime) {
-                throw new Error('JWTExpired');
+            const token = localStorage.getItem('token');
+            if (!token) {
+                this.showLogin();
+                return null;
             }
             
-            // Try to find userId in common JWT fields
-            const userId = parseInt(decoded.userId || decoded.user_id || decoded.id || decoded.sub, 10);
-            
-            if (isNaN(userId)) {
-                console.error('Token payload:', decoded);
-                throw new Error('Could not find valid userId in token');
-            }
-            return userId;
+            const cleanToken = token.trim().replace(/^["']|["']$/g, '');
+            const decoded = jwtDecode(cleanToken);
+            return decoded.sub;
         } catch (error) {
-            console.error('Failed to decode token:', error);
-            if (error.message === 'JWTExpired') {
-                localStorage.removeItem('token');
-                this.token = null;
-                this.client.setToken(null);
-                document.getElementById('error-message').textContent = 'Your session has expired. Please log in again.';
-                this.showLogin();
-            } else {
-                document.getElementById('error-message').textContent = 'Invalid token format. Please log in again.';
-                this.showLogin();
-            }
+            console.error('Error decoding token:', error);
+            localStorage.removeItem('token');
+            this.showLogin();
             return null;
         }
     }
@@ -613,15 +505,6 @@ class App {
             ratioValue: document.getElementById('ratio-value')
         };
 
-        // Log found elements for debugging
-        console.log('Found DOM elements:', {
-            upBarExists: !!elements.upBar,
-            downBarExists: !!elements.downBar,
-            upValueExists: !!elements.upValue,
-            downValueExists: !!elements.downValue,
-            ratioValueExists: !!elements.ratioValue
-        });
-
         // Check if all elements exist
         const missingElements = Object.entries(elements)
             .filter(([key, element]) => !element)
@@ -643,24 +526,19 @@ class App {
             parsedTotalDown: totalDown
         });
         
-        // Calculate ratio with one decimal place
-        const ratio = totalDown > 0 ? (totalUp / totalDown).toFixed(1) : '0.0';
-
-        // Format size to show kB or MB as appropriate
+        // Format size to show MB with 2 decimal places
         const formatSize = bytes => {
-            const kb = bytes / 1024;
-            if (kb < 1024) {
-                // Less than 1MB, show as kB
-                return `${Math.round(kb)} kB`;
-            } else {
-                // 1MB or more, show as MB with 2 decimal places
-                return `${(kb / 1024).toFixed(2)} MB`;
-            }
+            // Convert bytes to MB (1 MB = 1,000,000 bytes)
+            const mb = bytes / 1000000;
+            return `${mb.toFixed(2)} MB`;
         };
         
-        // Update text values
+        // Update text values with exact values from the API
         elements.upValue.textContent = formatSize(totalUp);
         elements.downValue.textContent = formatSize(totalDown);
+        
+        // Calculate and display ratio with one decimal place
+        const ratio = totalDown > 0 ? (totalUp / totalDown).toFixed(1) : '0.0';
         elements.ratioValue.textContent = `Ratio: ${ratio}`;
 
         // Calculate bar widths
@@ -685,6 +563,133 @@ class App {
         document.getElementById('failed-audits').textContent = stats.failed;
         const successRate = (stats.passed / stats.total * 100).toFixed(1);
         document.getElementById('success-rate').textContent = `${successRate}%`;
+    }
+
+    /**
+     * Main function to load and display all profile data
+     * This is the entry point for data fetching and rendering
+     */
+    async loadProfileData() {
+        try {
+            const userId = this.getUserIdFromToken();
+            const eventId = 20;
+            const userData = await this.client.query(GET_USER_DATA, { 
+                userId, 
+                eventId 
+            });
+            
+            console.log('Profile data loaded:', userData);
+
+            if (userData.data?.user?.[0]) {
+                const user = userData.data.user[0];
+                this.data = userData.data;
+                
+                // Log audit ratio data
+                console.log('Audit ratio data:', {
+                    totalUp: user.totalUp,
+                    totalDown: user.totalDown,
+                    auditRatio: user.auditRatio
+                });
+
+                // Update basic info with extended user data
+                this.renderBasicInfo(user);
+                
+                // Ensure DOM is ready before rendering audit ratio
+                requestAnimationFrame(() => {
+                    console.log('Rendering audit ratio with data:', {
+                        totalUp: user.totalUp,
+                        totalDown: user.totalDown,
+                        auditRatio: user.auditRatio
+                    });
+                    this.renderAuditRatio(user);
+                });
+
+                // Render skills radar chart
+                const graphContainer = document.getElementById('graph');
+                if (graphContainer && user.skills) {
+                    renderSkillsRadar(graphContainer, user.skills);
+                }
+                
+                // Calculate and display XP progress using all xp_transactions
+                if (user.xp_transactions) {
+                    console.log('Total number of XP transactions:', user.xp_transactions.length);
+                    
+                    // Log details of each transaction
+                    user.xp_transactions.forEach((t, index) => {
+                        console.log(`Transaction ${index + 1}:`, {
+                            id: t.id,
+                            amount: t.amount,
+                            date: new Date(t.createdAt).toLocaleString(),
+                            path: t.path,
+                            objectType: t.object?.type,
+                            objectName: t.object?.name
+                        });
+                    });
+
+                    const totalXP = user.xp_transactions.reduce((sum, t) => sum + t.amount, 0);
+                    console.log('Calculated total XP:', totalXP);
+                    
+                    // Update XP information in kB format
+                    const totalXpElement = document.getElementById('total-xp');
+                    const projectsCompletedElement = document.getElementById('projects-completed');
+                    
+                    if (totalXpElement) {
+                        totalXpElement.textContent = this.formatFileSize(totalXP);
+                    }
+                    if (projectsCompletedElement && user.progresses) {
+                        const uniqueProjects = new Set(user.progresses.filter(p => p.grade !== null).map(p => p.object.id));
+                        projectsCompletedElement.textContent = uniqueProjects.size;
+                    }
+
+                    // Render XP graph
+                    const xpGraphContainer = document.getElementById('xp-graph');
+                    if (xpGraphContainer) {
+                        renderXPOverTime(xpGraphContainer, user.xp_transactions);
+                    }
+                }
+                
+                // Update projects list
+                if (user.progresses) {
+                    this.renderProjectsList(user.progresses);
+                }
+
+                // Update audit statistics
+                if (user.audits) {
+                    const sortedAudits = user.audits.nodes
+                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                    this.updateAuditStats({
+                        total: sortedAudits.length,
+                        passed: sortedAudits.filter(audit => audit.grade >= 1).length,
+                        failed: sortedAudits.filter(audit => audit.grade < 1).length,
+                        totalUp: user.totalUp,
+                        totalDown: user.totalDown
+                    });
+                    this.renderRecentAudits(sortedAudits);
+                }
+
+                // Render skills information
+                if (user.skills) {
+                    this.renderSkills(user.skills);
+                }
+
+                // Update level if available
+                const level = userData.data.event_user?.[0]?.level;
+                const userLevelElement = document.getElementById('user-level');
+                if (level && userLevelElement) {
+                    userLevelElement.textContent = `${level.toFixed(2)}`;
+                }
+
+                // Show the profile container
+                const profileContainer = document.getElementById('profile-container');
+                if (profileContainer) {
+                    profileContainer.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load profile data:', error);
+            // Handle error appropriately
+        }
     }
 
     // Initialize the app

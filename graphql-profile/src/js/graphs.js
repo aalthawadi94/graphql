@@ -9,33 +9,34 @@ export function renderXPOverTime(container, transactions) {
         return;
     }
 
-    // Sort transactions by date
-    const sortedTransactions = [...transactions].sort((a, b) => 
-        new Date(a.createdAt) - new Date(b.createdAt)
-    );
+    // Process the data
+    const data = transactions
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .reduce((acc, curr) => {
+            const date = new Date(curr.createdAt);
+            const lastEntry = acc[acc.length - 1];
+            const xp = curr.amount;
+            const name = curr.object?.name || 'Unknown';
 
-    // Calculate cumulative XP
-    let cumulativeXP = 0;
-    const data = sortedTransactions.map(t => {
-        cumulativeXP += t.amount;
-        return {
-            date: new Date(t.createdAt),
-            xp: cumulativeXP,
-            project: t.object?.name || 'Unknown',
-            amount: t.amount
-        };
-    });
+            if (!lastEntry) {
+                acc.push({ date, xp, name });
+            } else {
+                acc.push({ date, xp: lastEntry.xp + xp, name });
+            }
+            return acc;
+        }, []);
 
-    // Set up dimensions
-    const margin = { top: 20, right: 80, bottom: 30, left: 60 };
+    // Set up dimensions to match container size
+    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
     const width = container.clientWidth - margin.left - margin.right;
-    const height = 400 - margin.top - margin.bottom;
+    const height = container.clientHeight || width * 0.6; // Make height proportional to width if not set
 
     // Create SVG
     const svg = d3.select(container)
         .append('svg')
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
+        .attr('width', '100%')
+        .attr('height', '100%')
+        .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
@@ -53,39 +54,36 @@ export function renderXPOverTime(container, transactions) {
         .x(d => x(d.date))
         .y(d => y(d.xp));
 
-    // Add axes
+    // Add X axis with fewer ticks
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
-        .call(d3.axisBottom(x));
+        .call(d3.axisBottom(x)
+            .ticks(6)
+            .tickFormat(d => {
+                const date = new Date(d);
+                return date.toLocaleString('default', { month: 'short', year: '2-digit' });
+            }))
+        .selectAll('text')
+        .style('fill', '#fff')
+        .style('font-size', '12px');
 
+    // Add Y axis
     svg.append('g')
         .call(d3.axisLeft(y)
-            .tickFormat(d => `${(d / 1000).toFixed(1)}kB`));
+            .tickFormat(d => `${d/1000}kB`))
+        .selectAll('text')
+        .style('fill', '#fff')
+        .style('font-size', '12px');
 
-    // Add line path
+    // Add the line
     svg.append('path')
         .datum(data)
         .attr('fill', 'none')
-        .attr('stroke', '#3498db')
+        .attr('stroke', '#00bfff')
         .attr('stroke-width', 2)
         .attr('d', line);
 
-    // Add tooltip
-    const tooltip = d3.select(container)
-        .append('div')
-        .attr('class', 'tooltip')
-        .style('opacity', 0)
-        .style('position', 'absolute')
-        .style('background-color', '#2c3e50')
-        .style('color', '#ecf0f1')
-        .style('border', '1px solid #34495e')
-        .style('padding', '10px')
-        .style('border-radius', '4px')
-        .style('pointer-events', 'none')
-        .style('z-index', '10')
-        .style('font-size', '14px');
-
-    // Add dots for each data point
+    // Add dots
     svg.selectAll('.dot')
         .data(data)
         .enter()
@@ -94,142 +92,134 @@ export function renderXPOverTime(container, transactions) {
         .attr('cx', d => x(d.date))
         .attr('cy', d => y(d.xp))
         .attr('r', 4)
-        .attr('fill', '#3498db')
-        .on('mouseover', function(event, d) {
-            d3.select(this)
-                .attr('r', 6)
-                .attr('fill', '#2980b9');
-
-            tooltip.transition()
-                .duration(200)
-                .style('opacity', .9);
-
-            const formatDate = d3.timeFormat('%Y-%m-%d %H:%M');
-            tooltip.html(
-                `Project: ${d.project}<br/>` +
-                `XP: ${(d.amount / 1000).toFixed(1)}kB<br/>` +
-                `Total: ${(d.xp / 1000).toFixed(1)}kB<br/>` +
-                `Date: ${formatDate(d.date)}`
-            )
-            .style('left', (event.pageX + 10) + 'px')
-            .style('top', (event.pageY - 28) + 'px');
-        })
-        .on('mouseout', function() {
-            d3.select(this)
-                .attr('r', 4)
-                .attr('fill', '#3498db');
-
-            tooltip.transition()
-                .duration(500)
-                .style('opacity', 0);
-        });
+        .style('fill', '#00bfff')
+        .append('title')
+        .text(d => `Project: ${d.name}\nDate: ${d.date.toLocaleDateString()}\nXP: ${d.xp.toLocaleString()}kB`);
 }
 
-export function renderProjectRatio(container, data) {
-    // Clear previous content
+export function renderSkillsRadar(container, skills) {
+    // Clear any existing content
     container.innerHTML = '';
-    
-    // Ensure we have valid data
-    if (!data || data.length === 0) {
-        console.error('No data provided for project ratio graph');
+
+    if (!skills || skills.length === 0) {
+        container.innerHTML = '<p>No skills data available</p>';
         return;
     }
 
-    // Set up dimensions
-    const margin = { top: 20, right: 30, bottom: 30, left: 30 };
+    // Define the fixed order of skills we want to show
+    const skillOrder = ['Prog', 'Go', 'Back-End', 'Front-End', 'Js', 'Html'];
+    
+    // Process skills data - normalize skill names
+    const skillsMap = new Map();
+    skills.forEach(skill => {
+        const rawName = skill.type.replace('skill_', '').toLowerCase();
+        let normalizedName;
+        
+        switch(rawName) {
+            case 'prog': normalizedName = 'Prog'; break;
+            case 'go': normalizedName = 'Go'; break;
+            case 'front-end': normalizedName = 'Front-End'; break;
+            case 'js': normalizedName = 'Js'; break;
+            case 'back-end': normalizedName = 'Back-End'; break;
+            case 'html': normalizedName = 'Html'; break;
+            default: normalizedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+        }
+        
+        const currentAmount = skillsMap.get(normalizedName) || 0;
+        skillsMap.set(normalizedName, currentAmount + skill.amount);
+    });
+
+    // Transform the data to match our fixed order
+    const skillsData = skillOrder.map(skillName => ({
+        axis: skillName,
+        value: skillsMap.get(skillName) || 0
+    }));
+
+    // Set up dimensions to match container size
+    const margin = { top: 50, right: 50, bottom: 50, left: 50 };
     const width = container.clientWidth - margin.left - margin.right;
-    const height = container.clientHeight - margin.top - margin.bottom;
+    const height = container.clientHeight || width; // Make it square if height not set
     const radius = Math.min(width, height) / 2;
 
     // Create SVG
     const svg = d3.select(container)
         .append('svg')
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
+        .attr('width', '100%')
+        .attr('height', '100%')
+        .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
         .append('g')
-        .attr('transform', `translate(${width/2},${height/2})`);
+        .attr('transform', `translate(${width/2 + margin.left},${height/2 + margin.top})`);
 
-    // Create color scale
-    const color = d3.scaleOrdinal()
-        .domain(['Passed', 'Failed'])
-        .range(['#2ecc71', '#e74c3c']);
+    // Number of axes (skills)
+    const numAxes = skillsData.length;
+    const angleSlice = (Math.PI * 2) / numAxes;
 
-    // Create pie layout
-    const pie = d3.pie()
-        .value(d => d.value)
-        .sort(null);
+    // Scale for the radius
+    const rScale = d3.scaleLinear()
+        .domain([0, 100])
+        .range([0, radius]);
 
-    // Create arc generator
-    const arc = d3.arc()
-        .innerRadius(radius * 0.6)
-        .outerRadius(radius * 0.8);
-
-    // Create outer arc for labels
-    const outerArc = d3.arc()
-        .innerRadius(radius * 0.9)
-        .outerRadius(radius * 0.9);
-
-    // Add tooltip
-    const tooltip = d3.select(container)
-        .append('div')
-        .attr('class', 'graph-tooltip')
-        .style('opacity', 0)
-        .style('position', 'absolute')
-        .style('pointer-events', 'none');
-
-    // Create pie slices
-    const slices = svg.selectAll('path')
-        .data(pie(data))
+    // Draw the circular grid
+    const levels = 10;
+    const gridCircles = svg.selectAll('.grid-circle')
+        .data(d3.range(1, levels + 1).reverse())
         .enter()
-        .append('path')
-        .attr('class', d => d.data.label.toLowerCase() + '-slice')
-        .attr('d', arc)
-        .attr('stroke', '#ecf0f1')
-        .attr('stroke-width', '2')
-        .style('cursor', 'pointer')
-        .on('mouseover', (event, d) => {
-            tooltip.transition()
-                .duration(200)
-                .style('opacity', 0.9);
-            tooltip.html(`${d.data.label}: ${d.data.value} (${Math.round(d.data.value / data.reduce((sum, d) => sum + d.value, 0) * 100)}%)`)
-                .style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 28) + 'px');
-        })
-        .on('mouseout', () => {
-            tooltip.transition()
-                .duration(500)
-                .style('opacity', 0);
-        });
+        .append('circle')
+        .attr('class', 'grid-circle')
+        .attr('r', d => radius * d/levels)
+        .style('fill', 'none')
+        .style('stroke', '#666')
+        .style('stroke-opacity', 0.3);
+
+    // Draw the axes
+    const axes = svg.selectAll('.axis')
+        .data(skillsData)
+        .enter()
+        .append('g')
+        .attr('class', 'axis');
+
+    axes.append('line')
+        .attr('x1', 0)
+        .attr('y1', 0)
+        .attr('x2', (d, i) => radius * Math.cos(angleSlice * i - Math.PI/2))
+        .attr('y2', (d, i) => radius * Math.sin(angleSlice * i - Math.PI/2))
+        .style('stroke', '#666')
+        .style('stroke-width', '1px');
 
     // Add labels
-    const text = svg.selectAll('text')
-        .data(pie(data))
+    axes.append('text')
+        .attr('class', 'legend')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr('x', (d, i) => (radius + 30) * Math.cos(angleSlice * i - Math.PI/2))
+        .attr('y', (d, i) => (radius + 30) * Math.sin(angleSlice * i - Math.PI/2))
+        .text(d => d.axis)
+        .style('fill', '#fff')
+        .style('font-size', '12px');
+
+    // Draw the radar chart path
+    const radarLine = d3.lineRadial()
+        .radius(d => rScale(d.value))
+        .angle((d, i) => i * angleSlice)
+        .curve(d3.curveLinearClosed);
+
+    // Add the path
+    svg.append('path')
+        .datum(skillsData)
+        .attr('class', 'radar-path')
+        .attr('d', radarLine)
+        .style('fill', 'rgba(147, 112, 219, 0.5)')
+        .style('stroke', 'rgb(147, 112, 219)')
+        .style('stroke-width', '2px');
+
+    // Add dots at each data point
+    svg.selectAll('.radar-dot')
+        .data(skillsData)
         .enter()
-        .append('text')
-        .attr('transform', d => {
-            const pos = outerArc.centroid(d);
-            return `translate(${pos})`;
-        })
-        .style('text-anchor', 'middle')
-        .style('fill', '#ecf0f1');
-
-    text.append('tspan')
-        .text(d => d.data.label)
-        .attr('y', '-0.6em')
-        .style('font-weight', 'bold');
-
-    text.append('tspan')
-        .text(d => `${d.data.value}`)
-        .attr('x', 0)
-        .attr('y', '1em');
-
-    // Add animations
-    slices.transition()
-        .duration(1000)
-        .attrTween('d', function(d) {
-            const interpolate = d3.interpolate({startAngle: 0, endAngle: 0}, d);
-            return function(t) {
-                return arc(interpolate(t));
-            };
-        });
+        .append('circle')
+        .attr('class', 'radar-dot')
+        .attr('r', 4)
+        .attr('cx', (d, i) => rScale(d.value) * Math.cos(angleSlice * i - Math.PI/2))
+        .attr('cy', (d, i) => rScale(d.value) * Math.sin(angleSlice * i - Math.PI/2))
+        .style('fill', 'rgb(147, 112, 219)');
 }

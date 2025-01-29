@@ -5,14 +5,24 @@ export class GraphQLClient {
     }
 
     setToken(token) {
-        this.token = token;
-        console.log('GraphQL Client token updated:', token);
+        // Clean the token by removing any whitespace or quotes
+        if (token) {
+            this.token = token.trim().replace(/^["']|["']$/g, '');
+            console.log('Token set successfully');
+        } else {
+            this.token = null;
+            console.log('Token cleared');
+        }
     }
 
     async query(query, variables) {
         try {
             console.log('Making GraphQL request with query:', query, 'and variables:', variables); // Debug log
             
+            if (!this.token) {
+                throw new Error('No authentication token available');
+            }
+
             const response = await fetch(this.endpoint, {
                 method: 'POST',
                 headers: {
@@ -32,6 +42,7 @@ export class GraphQLClient {
             console.log('GraphQL response:', result); // Debug log
             
             if (result.errors) {
+                console.error('GraphQL errors:', result.errors);
                 throw new Error(result.errors[0].message);
             }
 
@@ -103,12 +114,9 @@ export const GET_USER_DATA = `
         updatedAt
       }
       skills: transactions(
-        where: {
-          userId: {_eq: $userId},
-          type: {_like: "skill_%"},
-          amount: {_gt: 0}
-        }
-        order_by: [{amount: desc}]
+        order_by: [{type: desc}, {amount: desc}],
+        distinct_on: [type],
+        where: {userId: {_eq: $userId}, type: {_in: ["skill_js", "skill_go", "skill_html", "skill_prog", "skill_front-end", "skill_back-end"]}}
       ) {
         type
         amount

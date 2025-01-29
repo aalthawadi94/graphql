@@ -160,151 +160,31 @@ button#logout-btn:hover {
 }
 
 .card {
-    background-color: #2d2d2d;
+    background-color: var(--card-bg);
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
 }
 
 .card h2 {
     margin-top: 0;
-    margin-bottom: 1rem;
-    color: var(--text-color);
-    font-size: 1.5rem;
-}
-
-.content {
+    margin-bottom: 10px;
     color: var(--text-color);
 }
 
-#graph-container {
-    grid-column: span 2;
-    min-height: 500px;
+.card p {
+    color: var(--text-muted);
+    margin-bottom: 20px;
 }
 
-#projects-list,
-#audits-list {
-    grid-column: span 1;
-}
-
-.projects-table,
-.audits-table {
+#graph, #xp-graph {
     width: 100%;
-    margin-top: 1rem;
-    overflow-x: auto;
-}
-
-.projects-table table,
-.audits-table table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 1rem;
-}
-
-.projects-table th,
-.projects-table td,
-.audits-table th,
-.audits-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.projects-table th,
-.audits-table th {
-    background-color: rgba(255, 255, 255, 0.05);
-    font-weight: bold;
-    color: #fff;
-}
-
-.projects-table tr:hover,
-.audits-table tr:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.lists-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    width: 100%;
-    margin-top: 1rem;
-}
-
-.card#projects-list,
-.card#audits-list {
-    margin: 0;
-    
-}
-
-#basic-info,
-#xp-info,
-#audit-info {
-    min-height: 150px;
-}
-
-/* Status styles */
-.passed {
-    color: #4CAF50;
-    font-weight: bold;
-}
-
-.failed {
-    color: #f44336;
-    font-weight: bold;
-}
-
-.in-progress {
-    color: #2196F3;
-    font-weight: bold;
-}
-
-/* Table styles */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 1rem;
-}
-
-th, td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-th {
-    background-color: rgba(255, 255, 255, 0.05);
-    font-weight: bold;
-    color: #fff;
-}
-
-tr:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-@media (max-width: 1200px) {
-    .container,
-    .profile-grid {
-        width: 98%;
-        padding: 0.5rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .profile-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    #graph-container,
-    #projects-list,
-    #audits-list {
-        grid-column: span 1;
-    }
-
-    .card {
-        padding: 1rem;
-    }
+    height: 400px;
+    margin: 20px auto;
+    position: relative;
 }
 
 /* Graph styles */
@@ -477,4 +357,162 @@ select:focus {
     text-align: right;
     color: var(--text-color);
     font-weight: bold;
+}
+
+/* Radar Chart Styles */
+.radar-path {
+    fill-opacity: 0.5;
+    transition: fill-opacity 0.3s;
+}
+
+.radar-path:hover {
+    fill-opacity: 0.7;
+}
+
+.radar-dot {
+    transition: r 0.2s;
+}
+
+.radar-dot:hover {
+    r: 6;
+}
+
+.axis text {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+/* Status styles */
+.passed {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.failed {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.in-progress {
+    color: #2196F3;
+    font-weight: bold;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+th {
+    background-color: rgba(255, 255, 255, 0.05);
+    font-weight: bold;
+    color: #fff;
+}
+
+tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Section visibility */
+.hidden {
+    display: none !important;
+}
+
+/* Login section styles */
+#login-section {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 20px;
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#login-section h1 {
+    margin-bottom: 20px;
+    color: var(--text-color);
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background-color: #333;
+    color: var(--text-color);
+}
+
+.error {
+    color: #f44336;
+    margin: 10px 0;
+    text-align: center;
+}
+
+/* Profile section styles */
+#profile-section {
+    padding: 20px;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.logout-btn {
+    padding: 8px 16px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background-color: #d32f2f;
+}
+
+@media (max-width: 1200px) {
+    .container,
+    .profile-grid {
+        width: 98%;
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    #graph-container,
+    #projects-list,
+    #audits-list {
+        grid-column: span 1;
+    }
+
+    .card {
+        padding: 1rem;
+    }
 }

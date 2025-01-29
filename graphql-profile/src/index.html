@@ -48,130 +48,132 @@
     </style>
 </head>
 <body>
-    <div id="login-container" class="login-container">
-        <form id="login-form">
-            <h2>Login</h2>
-            <div id="error-message" class="error"></div>
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" required>
-            </div>
-            <button type="submit">Login</button>
-        </form>
-    </div>
-
-    <div id="profile-container" class="container hidden">
-        <header>
-            <h1>School Profile</h1>
-            <button id="logout-btn">Logout</button>
-        </header>
-
-        <div class="profile-grid">
-            <div class="card" id="basic-info">
-                <h2>Basic Information</h2>
-                <div class="content">
-                    <p><strong>Login:</strong> <span id="user-login"></span></p>
-                    <p><strong>ID:</strong> <span id="user-id"></span></p>
-                    <p><strong>Level:</strong> <span id="user-level">0</span></p>
+    <div class="container">
+        <section id="login-section">
+            <h1>Login</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
                 </div>
-            </div>
-
-            <div class="card" id="xp-info">
-                <h2>XP Progress</h2>
-                <div class="content">
-                    <p><strong>Total XP:</strong> <span id="total-xp"></span></p>
-                    <p><strong>Projects Completed:</strong> <span id="projects-completed"></span></p>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
                 </div>
+                <div id="error-message" class="error"></div>
+                <button type="submit">Login</button>
+            </form>
+        </section>
+
+        <section id="profile-section" class="hidden">
+            <div class="profile-header">
+                <h1>Profile</h1>
+                <button id="logout" class="logout-btn">Logout</button>
             </div>
 
-            <div class="card">
-                <div id="audit-stats">
-                    <h2>Audit Statistics</h2>
-                    <p>Total Audits: <span id="total-audits">0</span></p>
-                    <p>Passed Audits: <span id="passed-audits">0</span></p>
-                    <p>Failed Audits: <span id="failed-audits">0</span></p>
-                    <p>Success Rate: <span id="success-rate">0%</span></p>
-                </div>
-            </div>
-
-            <div class="card">
-                <div id="audit-ratio-stats">
-                    <h2>Audit Ratio</h2>
-                    <div class="audit-ratio-item">
-                        <div class="audit-ratio-label">Done:</div>
-                        <div class="audit-ratio-value" id="up-value">0kB</div>
-                        <div class="audit-ratio-bar-container">
-                            <div class="audit-ratio-bar" id="up-bar"></div>
-                        </div>
+            <div class="profile-grid">
+                <div class="card" id="basic-info">
+                    <h2>Basic Information</h2>
+                    <div class="content">
+                        <p><strong>Login:</strong> <span id="user-login"></span></p>
+                        <p><strong>ID:</strong> <span id="user-id"></span></p>
+                        <p><strong>Level:</strong> <span id="user-level">0</span></p>
                     </div>
-                    <div class="audit-ratio-item">
-                        <div class="audit-ratio-label">Received:</div>
-                        <div class="audit-ratio-value" id="down-value">0kB</div>
-                        <div class="audit-ratio-bar-container">
-                            <div class="audit-ratio-bar" id="down-bar"></div>
-                        </div>
+                </div>
+
+                <div class="card" id="xp-info">
+                    <h2>XP Progress</h2>
+                    <div class="content">
+                        <p><strong>Total XP:</strong> <span id="total-xp"></span></p>
+                        <p><strong>Projects Completed:</strong> <span id="projects-completed"></span></p>
                     </div>
-                    <div class="audit-ratio" id="ratio-value">Ratio: 0.0</div>
                 </div>
-            </div>
 
-            <div class="card" id="graph-container">
-                <h2>Statistics</h2>
-                <div class="graph-controls">
-                    <select id="graph-type">
-                        <option value="xp">XP over Time</option>
-                        <option value="ratio">Project Pass/Fail Ratio</option>
-                    </select>
+                <div class="card">
+                    <div id="audit-stats">
+                        <h2>Audit Statistics</h2>
+                        <p>Total Audits: <span id="total-audits">0</span></p>
+                        <p>Passed Audits: <span id="passed-audits">0</span></p>
+                        <p>Failed Audits: <span id="failed-audits">0</span></p>
+                        <p>Success Rate: <span id="success-rate">0%</span></p>
+                    </div>
                 </div>
-                <div id="graph"></div>
-            </div>
 
-            <div class="card" id="projects-list">
-                <h2>Recent Projects</h2>
-                <div class="projects-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Project Name</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="projects-tbody">
-                        </tbody>
-                    </table>
+                <div class="card">
+                    <div id="audit-ratio-stats">
+                        <h2>Audit Ratio</h2>
+                        <div class="audit-ratio-item">
+                            <div class="audit-ratio-label">Done:</div>
+                            <div class="audit-ratio-value" id="up-value">0kB</div>
+                            <div class="audit-ratio-bar-container">
+                                <div class="audit-ratio-bar" id="up-bar"></div>
+                            </div>
+                        </div>
+                        <div class="audit-ratio-item">
+                            <div class="audit-ratio-label">Received:</div>
+                            <div class="audit-ratio-value" id="down-value">0kB</div>
+                            <div class="audit-ratio-bar-container">
+                                <div class="audit-ratio-bar" id="down-bar"></div>
+                            </div>
+                        </div>
+                        <div class="audit-ratio" id="ratio-value">Ratio: 0.0</div>
+                    </div>
                 </div>
-                <div class="list-controls">
-                    <button id="show-more-projects" class="show-more-btn">Show More</button>
-                    <button id="show-less-projects" class="show-less-btn hidden">Show Less</button>
-                </div>
-            </div>
 
-            <div class="card" id="audits-list">
-                <h2>Recent Audits</h2>
-                <div class="audits-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Project</th>
-                                <th>Date</th>
-                                <th>Result</th>
-                            </tr>
-                        </thead>
-                        <tbody id="audits-tbody">
-                        </tbody>
-                    </table>
+                <div class="card">
+                    <h2>Best skills</h2>
+                    <p>Here are your skills with the highest completion rate among all categories.</p>
+                    <div id="graph"></div>
                 </div>
-                <div class="list-controls">
-                    <button id="show-more-audits" class="show-more-btn">Show More</button>
-                    <button id="show-less-audits" class="show-less-btn hidden">Show Less</button>
+
+                <div class="card">
+                    <h2>XP Progress</h2>
+                    <div id="xp-graph"></div>
+                </div>
+
+                <div class="card" id="projects-list">
+                    <h2>Recent Projects</h2>
+                    <div class="projects-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Project Name</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projects-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="list-controls">
+                        <button id="show-more-projects" class="show-more-btn">Show More</button>
+                        <button id="show-less-projects" class="show-less-btn hidden">Show Less</button>
+                    </div>
+                </div>
+
+                <div class="card" id="audits-list">
+                    <h2>Recent Audits</h2>
+                    <div class="audits-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Date</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audits-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="list-controls">
+                        <button id="show-more-audits" class="show-more-btn">Show More</button>
+                        <button id="show-less-audits" class="show-less-btn hidden">Show Less</button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 
     <script type="module" src="js/app.js"></script>
